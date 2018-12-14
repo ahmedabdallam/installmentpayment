@@ -24,16 +24,11 @@ public class InstallmentController {
 
 		return installmentService.getPendingInstallments(customerName);
 	}
-	
+
 	@GetMapping("/installmentCustomer")
-	public List<Installment> getPendingInstallmentsByPhone(@RequestParam(value = "customerPhoneNumber") String customerPhoneNumber) {
+	public List<Installment> getPendingInstallmentsByPhone(
+			@RequestParam(value = "customerPhoneNumber") String customerPhoneNumber) {
 
 		return installmentService.getPendingInstallmentsByPhone(customerPhoneNumber);
-	}
-
-	@GetMapping("/installmentnew")
-	public Installment getUnpaidInstallments(@RequestParam(value = "customerName") String customerName) {
-
-		return installmentService.getNextUnpaidInstallment(customerName);
 	}
 }

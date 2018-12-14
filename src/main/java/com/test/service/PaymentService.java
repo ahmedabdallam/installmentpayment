@@ -1,5 +1,7 @@
 package com.test.service;
 
+import java.time.LocalDate;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -7,9 +9,11 @@ import com.test.dao.CustomerDao;
 import com.test.dao.InstallmentDao;
 import com.test.dao.PaymentDao;
 import com.test.dao.PaymentPartnerDao;
+import com.test.dao.PenaltyFeesDao;
 import com.test.model.CustomPayment;
 import com.test.model.Installment;
 import com.test.model.Payment;
+import com.test.model.PenaltyFees;
 
 @Service
 public class PaymentService {
@@ -26,6 +30,9 @@ public class PaymentService {
 	@Autowired
 	PaymentPartnerDao partnerDao;
 
+	@Autowired
+	PenaltyFeesDao penaltyFeesDao;
+
 	public void addNewPayment(CustomPayment customPayment) {
 		int customerId = customerDao.getCustomerByPhone(customPayment.getCustomerPhoneNumber());
 		Installment installment = installmentDao.getNextUnpaidInstallment(customerId);
@@ -36,18 +43,38 @@ public class PaymentService {
 		payment.setPartnerId(partnerId);
 		payment.setInstallmentId(installment.getId());
 		payment.setAmount(new Double(customPayment.getAmount()));
-		System.out.println("Installment ID is >>" + installment.getId());
+
 		addNewPayment(payment);
 	}
 
 	public void addNewPayment(Payment payment) {
+		LocalDate todayDate = LocalDate.now();
+		LocalDate installmentDueDate = installmentDao.getNextUnpaidInstallment(payment.getCustomerId())
+				.getInstallmentDueDate().toLocalDate();
+
 		paymentDao.addNewPayment(payment);
-		int paymentId = paymentDao.getCurrentPaymentId(payment);
-		payment.setId(paymentId);
+		Payment currentPayment = paymentDao.getCurrentPaymentId(payment);
+		payment.setId(currentPayment.getId());
 		installmentDao.addInstallmentPayment(payment);
+		if (todayDate.isAfter(installmentDueDate)) {
+			addNewPenaltyFees(payment);
+			installmentDao.updateDelayedInstallment(payment.getInstallmentId());
+		}
 	}
 
-	public int getCurrentPaymentId(Payment payment) {
+	private void addNewPenaltyFees(Payment payment) {
+
+		PenaltyFees penaltyFees = new PenaltyFees();
+		penaltyFees.setAmount(50);
+		penaltyFees.setCustomerId(payment.getCustomerId());
+		penaltyFees.setPaymentId(payment.getId());
+		penaltyFees.setInstallmentId(payment.getInstallmentId());
+		penaltyFees.setOriginalAmount(installmentDao.getAmountByInstallmentId(payment.getInstallmentId()).getAmount());
+
+		penaltyFeesDao.addNewPenaltyFees(penaltyFees);
+	}
+
+	public Payment getCurrentPaymentId(Payment payment) {
 		return paymentDao.getCurrentPaymentId(payment);
 	}
 }

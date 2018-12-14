@@ -1,7 +1,12 @@
 package com.test.dao;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 import com.test.model.Payment;
@@ -20,12 +25,21 @@ public class PaymentDao {
 				payment.getInstallmentId());
 	}
 
-	public int getCurrentPaymentId(Payment payment) {
-		int paymentId = (Integer) jdbcTemplate.queryForObject(
-				"SELECT ID FROM PAYMENT WHERE CUSTOMER_ID=? AND PARTNER_ID=? AND INSTALLMENT_ID=?",
-				new Object[] { payment.getCustomerId(), payment.getPartnerId(), payment.getInstallmentId() },
-				Integer.class);
-		return paymentId;
+	public Payment getCurrentPaymentId(Payment payment) {
+
+		List<Payment> payments = jdbcTemplate.query(
+				"SELECT * FROM PAYMENT WHERE CUSTOMER_ID=" + payment.getCustomerId() + " AND PARTNER_ID="
+						+ payment.getPartnerId() + " AND INSTALLMENT_ID=" + payment.getInstallmentId() + "",
+				new RowMapper<Payment>() {
+					@Override
+					public Payment mapRow(ResultSet rs, int rowNum) throws SQLException {
+						Payment payment = new Payment();
+						payment.setId(rs.getInt("ID"));
+						payment.setAmount(rs.getDouble("AMOUNT"));
+						return payment;
+					}
+				});
+		return payments.get(0);
 	}
 
 }
